@@ -1,0 +1,22 @@
+{
+    "name": "zalanihir/deadcode-scanner",
+    "description": "Automatic dead code and route scanner for Laravel",
+    "type": "library",
+    "require": {
+        "php": "^8.2",
+        "illuminate/support": "^12.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "ZalaNihir\\DeadcodeScanner\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "ZalaNihir\\DeadcodeScanner\\DeadCodeScannerServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "dev"
+}
