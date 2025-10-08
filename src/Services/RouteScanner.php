@@ -6,6 +6,17 @@ use Illuminate\Support\Facades\Route;
 
 class RouteScanner
 {
+    /** @var array<string> */
+    protected array $ignoredRouteNamesOrUris;
+    /** @var array<string> */
+    protected array $ignoredControllerClasses;
+
+    public function __construct()
+    {
+        $ignore = (array) (config('deadcode.ignore') ?? []);
+        $this->ignoredRouteNamesOrUris = array_values(array_filter((array)($ignore['routes'] ?? [])));
+        $this->ignoredControllerClasses = array_values(array_filter((array)($ignore['controllers'] ?? [])));
+    }
     /**
      * Return a list of all routes (simple array).
      *
@@ -16,6 +27,9 @@ class RouteScanner
         $out = [];
 
         foreach (Route::getRoutes() as $route) {
+            if ($this->isIgnoredRoute($route)) {
+                continue;
+            }
             $out[] = [
                 'uri'        => $route->uri(),
                 'methods'    => $route->methods(),
@@ -38,6 +52,9 @@ class RouteScanner
         $used = [];
 
         foreach (Route::getRoutes() as $route) {
+            if ($this->isIgnoredRoute($route)) {
+                continue;
+            }
             $action = $route->getActionName();
             if (! $action) {
                 continue;
@@ -56,6 +73,10 @@ class RouteScanner
             } else {
                 $class  = $action;
                 $method = '__invoke';
+            }
+
+            if ($this->isIgnoredController($class)) {
+                continue;
             }
 
             if (! isset($used[$class])) {
@@ -83,6 +104,9 @@ class RouteScanner
         $missing = [];
 
         foreach (Route::getRoutes() as $route) {
+            if ($this->isIgnoredRoute($route)) {
+                continue;
+            }
             $action = $route->getActionName();
             if (! $action || strpos($action, 'Closure') !== false) {
                 continue;
@@ -95,6 +119,10 @@ class RouteScanner
             } else {
                 $class  = $action;
                 $method = '__invoke';
+            }
+
+            if ($this->isIgnoredController($class)) {
+                continue;
             }
 
             $classExists  = class_exists($class);
@@ -111,5 +139,34 @@ class RouteScanner
         }
 
         return $missing;
+    }
+
+    /**
+     * @param mixed $route
+     */
+    protected function isIgnoredRoute($route): bool
+    {
+        try {
+            $name = method_exists($route, 'getName') ? $route->getName() : null;
+            $uri  = method_exists($route, 'uri') ? $route->uri() : null;
+        } catch (\Throwable) {
+            $name = null;
+            $uri = null;
+        }
+
+        foreach ($this->ignoredRouteNamesOrUris as $ignored) {
+            if ($ignored === '' || $ignored === null) {
+                continue;
+            }
+            if ($name === $ignored || $uri === $ignored) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    protected function isIgnoredController(string $class): bool
+    {
+        return in_array($class, $this->ignoredControllerClasses, true);
     }
 }

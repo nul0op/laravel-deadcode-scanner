@@ -4,6 +4,14 @@ namespace ZalaNihir\DeadcodeScanner\Services;
 
 class ViewScanner
 {
+    /** @var array<string> */
+    protected array $ignoredViews;
+
+    public function __construct()
+    {
+        $ignore = (array) (config('deadcode.ignore') ?? []);
+        $this->ignoredViews = array_values(array_filter((array)($ignore['views'] ?? [])));
+    }
     /**
      * Return all blade view names found under resources/views.
      * Example: resources/views/emails/new_user.blade.php => "emails.new_user"
@@ -25,7 +33,9 @@ class ViewScanner
             $relative = str_replace($viewsPath . DIRECTORY_SEPARATOR, '', $file);
             $viewName = preg_replace('/\.blade\.php$/', '', $relative);
             $viewName = str_replace(DIRECTORY_SEPARATOR, '.', $viewName);
-            $views[] = $viewName;
+            if (! in_array($viewName, $this->ignoredViews, true)) {
+                $views[] = $viewName;
+            }
         }
 
         return array_values(array_unique($views));
@@ -83,7 +93,9 @@ class ViewScanner
                         foreach ($matches[1] as $m) {
                             // normalize slashes to dot-notation
                             $m = preg_replace('#/+#', '.', trim($m));
-                            $found[] = $m;
+                            if (! in_array($m, $this->ignoredViews, true)) {
+                                $found[] = $m;
+                            }
                         }
                     }
                 }

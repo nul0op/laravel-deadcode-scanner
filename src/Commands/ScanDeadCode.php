@@ -10,7 +10,7 @@ use ZalaNihir\DeadcodeScanner\Services\BladeRouteScanner;
 
 class ScanDeadCode extends Command
 {
-    protected $signature = 'deadcode:scan {--d|details : show more details}';
+    protected $signature = 'deadcode:scan {--d|details : show more details} {--json : output JSON}';
     protected $description = 'Scan project for unused routes, controllers, and views';
 
     public function handle()
@@ -79,6 +79,22 @@ class ScanDeadCode extends Command
             }
         } else {
             $this->info("\n✅ All Blade routes exist.");
+        }
+
+        if ($this->option('json')) {
+            $payload = [
+                'routes_missing' => $missing,
+                'unused_controller_methods' => $unusedControllers,
+                'unused_views' => $unusedViews,
+                'blade_missing_routes' => $missingBladeRoutes,
+            ];
+            $this->line(json_encode($payload, JSON_PRETTY_PRINT));
+        } elseif ($this->option('details')) {
+            $this->line("\nDetails:");
+            $this->line(" - Routes scanned: " . count($routes));
+            $this->line(" - Controllers with used methods: " . count($usedMethods));
+            $this->line(" - Unused controllers count: " . count($unusedControllers));
+            $this->line(" - Total unused views: " . count($unusedViews));
         }
 
         $this->info("\n🔚 Scan finished.");

@@ -9,10 +9,17 @@ class ControllerScanner
 {
     /** @var array controllerClass => [used methods] */
     protected array $usedMethods = [];
+    /** @var array<string> */
+    protected array $ignoredControllers;
+    /** @var array<string> */
+    protected array $ignoredMethods; // controller::method or just method name
 
     public function __construct(array $usedMethods = [])
     {
         $this->usedMethods = $usedMethods;
+        $ignore = (array) (config('deadcode.ignore') ?? []);
+        $this->ignoredControllers = array_values(array_filter((array)($ignore['controllers'] ?? [])));
+        $this->ignoredMethods = array_values(array_filter((array)($ignore['controller_methods'] ?? [])));
     }
 
     /**
@@ -71,6 +78,10 @@ class ControllerScanner
                     continue;
                 }
                 if (str_starts_with($mName, '__')) {
+                    continue;
+                }
+
+                if ($this->isIgnoredController($fqcn) || $this->isIgnoredMethod($fqcn, $mName)) {
                     continue;
                 }
 
@@ -140,5 +151,19 @@ class ControllerScanner
         }
 
         return $namespace ? ($namespace . '\\' . $class) : $class;
+    }
+
+    protected function isIgnoredController(string $fqcn): bool
+    {
+        return in_array($fqcn, $this->ignoredControllers, true);
+    }
+
+    protected function isIgnoredMethod(string $fqcn, string $methodName): bool
+    {
+        if (in_array($methodName, $this->ignoredMethods, true)) {
+            return true;
+        }
+        $combo = $fqcn . '::' . $methodName;
+        return in_array($combo, $this->ignoredMethods, true);
     }
 }
